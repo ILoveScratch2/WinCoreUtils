@@ -1,0 +1,36 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Build tools
+      run: |
+        mkdir tools_exe
+        $tools = Get-ChildItem -Path tools -Directory
+        foreach ($tool in $tools) {
+            $cFile = Join-Path $tool.FullName "$($tool.Name).c"
+            if (Test-Path $cFile) {
+                cl "$cFile" /Fe:tools_exe\$($tool.Name).exe
+            }
+        }
+      shell: pwsh
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-tools
+        path: tools_exe

@@ -30,6 +30,11 @@ static void usage(int status) {
     exit(status);
 }
 
+static void try_help(int status) {
+    fprintf(stderr, "Try `basename --help' for more information.\n");
+    exit(status);
+}
+
 char* base_name(const char* path) {
     if (!path || !*path) return strdup("");
 
@@ -148,7 +153,7 @@ int main(int argc, char** argv) {
             }
             else {
                 fprintf(stderr, "basename: invalid option '%s'\n", arg);
-                usage(EXIT_FAILURE);
+                try_help(EXIT_FAILURE);
             }
         }
         else break;
@@ -157,7 +162,7 @@ int main(int argc, char** argv) {
     int remaining = argc - optind;
     if (remaining < 1) {
         fprintf(stderr, "basename: missing operand\n");
-        usage(EXIT_FAILURE);
+        try_help(EXIT_FAILURE);
     }
 
     if (multiple) {
@@ -167,7 +172,7 @@ int main(int argc, char** argv) {
     else {
         if (remaining > 2) {
             fprintf(stderr, "basename: extra operand '%s'\n", argv[optind + 2]);
-            usage(EXIT_FAILURE);
+            try_help(EXIT_FAILURE);
         }
         perform_basename(argv[optind], (remaining >= 2) ? argv[optind + 1] : NULL, use_nuls);
     }

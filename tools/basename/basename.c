@@ -5,8 +5,22 @@
 #include <string.h>
 #include <stdbool.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define PROGRAM_NAME "basename"
 
+
+#ifdef _WIN32
+static UINT originalInputCP;
+static UINT originalOutputCP;
+#endif
+
+
+#ifdef _WIN32
+static void restoreCodePage(void);
+#endif
 
 // functions
 static void usage(int status);
@@ -16,6 +30,13 @@ char* base_name(const char* path);
 void strip_trailing_slashes(char* name);
 bool is_absolute_path(const char* name);
 bool is_root_directory(const char* name);
+
+#ifdef _WIN32
+static void restoreCodePage(void) {
+    SetConsoleCP(originalInputCP);
+    SetConsoleOutputCP(originalOutputCP);
+}
+#endif
 
 static void usage(int status) {
     fprintf(stderr, "Usage: %s NAME [SUFFIX]\n", PROGRAM_NAME);
@@ -116,6 +137,14 @@ static void perform_basename(const char* string, const char* suffix, bool use_nu
 }
 
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    originalInputCP = GetConsoleCP();
+    originalOutputCP = GetConsoleOutputCP();
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    atexit(restoreCodePage);
+#endif
+
     bool multiple = false, use_nuls = false;
     const char* suffix = NULL;
     int optind = 1;

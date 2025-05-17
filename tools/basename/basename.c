@@ -1,3 +1,20 @@
+/* Basename tools for ILS WinCoreUtils.
+   Copyright (C) 2025 ILoveScratch2 and WinCoreUtils contributors.
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License v3 published by
+   the Free Software Foundation.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License 3 for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
+/* Written by WenDao(ILoveScratch2) ilovescratch@foxmail.com  */
+
 #define _CRT_NONSTDC_NO_WARNINGS // Compatible for MSVC, GCC doesn't need this
 
 #include <stdio.h>
@@ -9,7 +26,7 @@
 #include <windows.h>
 #endif
 
-#define PROGRAM_NAME "basename"
+char *PROGRAM_NAME ="basename";
 
 
 #ifdef _WIN32
@@ -144,63 +161,96 @@ int main(int argc, char** argv) {
     SetConsoleOutputCP(CP_UTF8);
     atexit(restoreCodePage);
 #endif
+    PROGRAM_NAME = argv[0];
+    remove_suffix(PROGRAM_NAME, ".exe");
 
     bool multiple = false, use_nuls = false;
     const char* suffix = NULL;
     int optind = 1;
 
     while (optind < argc) {
-        char* arg = argv[optind];
+        char *arg = argv[optind];
         if (arg[0] == '-') {
-            if (!strcmp(arg, "-a") || !strcmp(arg, "--multiple")) {
-                multiple = true;
+            if (strcmp(arg, "--") == 0) {
                 optind++;
-            }
-            else if (!strcmp(arg, "-s") || !strcmp(arg, "--suffix")) {
-                if (++optind >= argc) {
-                    fprintf(stderr, "basename: missing suffix\n");
-                    usage(EXIT_FAILURE);
+                break;
+            } else if (strncmp(arg, "--", 2) == 0) {
+                if (!strcmp(arg, "--multiple")) {
+                    multiple = true;
+                    optind++;
+                } else if (!strcmp(arg, "--suffix")) {
+                    if (++optind >= argc) {
+                        fprintf(stderr, "%s: missing suffix\n", PROGRAM_NAME);
+                        usage(EXIT_FAILURE);
+                    }
+                    suffix = argv[optind++];
+                    multiple = true;
+                } else if (strncmp(arg, "--suffix=", 9) == 0) {
+                    suffix = arg + 9;
+                    multiple = true;
+                    optind++;
+                } else if (!strcmp(arg, "--zero")) {
+                    use_nuls = true;
+                    optind++;
+                } else if (!strcmp(arg, "--help")) {
+                    usage(EXIT_SUCCESS);
+                } else if (!strcmp(arg, "--version")) {
+                    printf("ILS WinCoreUtils Basename 0.1.1\n");
+                    exit(EXIT_SUCCESS);
+                } else {
+                    fprintf(stderr, "%s: invalid option '%s'\n", PROGRAM_NAME, arg);
+                    try_help(EXIT_FAILURE);
                 }
-                suffix = argv[optind++];
-                multiple = true;
-            }
-            else if (strncmp(arg, "--suffix=", 9) == 0) {
-                suffix = arg + 9;
-                multiple = true;
+            } else {
+                // 处理短选项组合
+                for (int i = 1; arg[i] != '\0'; i++) {
+                    char c = arg[i];
+                    switch (c) {
+                        case 'a':
+                            multiple = true;
+                            break;
+                        case 's':
+                            // 处理参数
+                            if (arg[i + 1] != '\0') {
+                                suffix = arg + i + 1;
+                                i = strlen(arg) - 1; // 跳过剩余字符
+                            } else {
+                                optind++;
+                                if (optind >= argc) {
+                                    fprintf(stderr, "%s: missing suffix\n", PROGRAM_NAME);
+                                    usage(EXIT_FAILURE);
+                                }
+                                suffix = argv[optind];
+                            }
+                            multiple = true;
+                            break;
+                        case 'z':
+                            use_nuls = true;
+                            break;
+                        default:
+                            fprintf(stderr, "%s: invalid option -- '%c'\n", PROGRAM_NAME, c);
+                            try_help(EXIT_FAILURE);
+                    }
+                }
                 optind++;
             }
-            else if (!strcmp(arg, "-z") || !strcmp(arg, "--zero")) {
-                use_nuls = true;
-                optind++;
-            }
-            else if (!strcmp(arg, "--help")) {
-                usage(EXIT_SUCCESS);
-            }
-            else if (!strcmp(arg, "--version")) {
-                printf("ILS WinCoreUtils Basename 0.1.1\n");
-                exit(EXIT_SUCCESS);
-            }
-            else {
-                fprintf(stderr, "basename: invalid option '%s'\n", arg);
-                try_help(EXIT_FAILURE);
-            }
+        } else {
+            break;
         }
-        else break;
     }
 
     int remaining = argc - optind;
     if (remaining < 1) {
-        fprintf(stderr, "basename: missing operand\n");
+        fprintf(stderr, "%s: missing operand\n", PROGRAM_NAME);
         try_help(EXIT_FAILURE);
     }
 
     if (multiple) {
         for (; optind < argc; optind++)
             perform_basename(argv[optind], suffix, use_nuls);
-    }
-    else {
+    } else {
         if (remaining > 2) {
-            fprintf(stderr, "basename: extra operand '%s'\n", argv[optind + 2]);
+            fprintf(stderr, "%s: extra operand '%s'\n", PROGRAM_NAME, argv[optind + 2]);
             try_help(EXIT_FAILURE);
         }
         perform_basename(argv[optind], (remaining >= 2) ? argv[optind + 1] : NULL, use_nuls);
